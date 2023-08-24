@@ -1,0 +1,150 @@
+---
+title: "behavioural measures and n2pc to cue"
+author: "jac"
+date: "2023-08-01"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+Data extracted from fieldtrip cue locked files:
+        cfg.channel     = {'PO3','PO7','O1'}; and  cfg.channel     = {'PO4','PO8','O2'};
+        cfg.baseline    = [-0.1 -0.00001]; %%% baseline corrected
+        
+
+```{r include=FALSE}
+
+rmarkdown::render("loadlibraries.Rmd")
+
+rm(list = ls(pattern = "\\model"))  ###remove previous models
+rm(list = ls(pattern = "^data")) ### c
+rm(list = ls(pattern = "^mu")) ### c
+rm(list = ls(pattern = "^dp")) ### c
+rm(list = ls(pattern = "^plot")) ### c
+
+data<-readr::read_csv("behavioural_cuen2pc.csv") 
+
+
+factor(data$subj)
+
+
+#centre scale edgedis
+center_scale <- function(x) {scale(x, scale = TRUE)}
+data$edgedisCS<-c(center_scale(data$edgedis))
+
+#logRT
+data$logRT=log1p(data$responsetime)
+
+```
+
+# create laterality index for N2pc (i.e. flip according to cue side)
+```{r include=FALSE}
+
+## create laterality index (N2pc)
+
+data <-data %>% 
+        mutate(Latindex=ifelse(sidecue==0,RightN2pc-LeftN2pc,NA)) %>% 
+        mutate(Latindex=ifelse(sidecue==1,LeftN2pc-RightN2pc,Latindex))
+
+
+data$csLeftN2pc<-c(center_scale(data$LeftN2pc))
+data$csRightN2pc<-c(center_scale(data$RightN2pc))
+data$csAveN2pc<-c(center_scale(data$AveN2pc))
+data$csLatindex<-c(center_scale(data$Latindex))
+hist(data$csLatindex)
+
+data <-data %>% 
+        mutate(RTcat=ifelse(responsetime>=0.9,1,NA)) %>% 
+        mutate(RTcat=ifelse(responsetime<0.9,0,RTcat))
+```
+
+# behavioural data
+```{r include=FALSE}
+pick=data$correct2=="correct" #pick the correct data
+dataC=data[pick,]
+
+# reponsetime time
+model.RT=lmer(logRT ~ cueV+edgedisCS*texrot+  (1|subj), data=dataC, REML = FALSE);
+
+# accuracy
+model.ACC=glmer(correct ~ cueV+edgedisCS*texrot+  (1|subj), data=data,family=binomial(link = "logit"));
+
+#certainty
+model.CERT=multinom(certain2 ~ cueV + edgedisCS*texrot, random =~1|subj, data=data) 
+
+
+```
+
+#N2pc reponse to the cue
+```{r}
+model.LI=lmer(csLatindex ~ edgedisCS*texrot+  (1|subj), data=data, REML = FALSE);
+
+#cert and correct model
+model.lat_CerCor=lmer(csLatindex ~  certain2*correct2  + (1|subj), data=data, REML = FALSE);
+```
+
+```{r}
+
+#submission 1 ~line 258
+summary(model.RT)
+anova(model.RT, type=3)
+
+#submission 1 ~line 272
+summary(model.ACC)
+confint(model.ACC,method="Wald")
+Anova(model.ACC, type=2) 
+
+#submission 1 ~line 282
+summary(model.CERT)
+mtable(model.CERT)
+Anova(model.CERT, type=2)
+confint(model.CERT,method="Wald")
+
+### submission 1 - ~line 326
+summary(model.LI)
+anova(model.LI,type=3) # no interaction, use type 3
+summary(model.LI)$coeffcients
+
+#submission 1 ~line 333
+### for paper
+summary(model.lat_CerCor)
+anova(model.lat_CerCor,type=3)
+summary(model.lat_CerCor)$coef
+
+
+
+```
+
+
+mediation for cue N2pc submission 1 ~line 407
+```{r}
+data$cer<-c(center_scale(data$certain))
+library(lmerTest) 
+pkg <- "package:lmerTest"
+detach(pkg, character.only = TRUE)  # remove else mediation won't work
+
+data$texrot=factor(data$texrot, levels=c("deg0","deg45","deg90"), order=FALSE)
+ fit.mediator=lmer(cer ~ edgedisCS*texrot  + (1|subj), data=data,REML = FALSE);
+ fit.totaleffect=lmer(csLatindex ~ edgedisCS*texrot     + (1|subj), data=data,REML = FALSE);
+ fit.dv=lmer(csLatindex ~ edgedisCS*texrot + cer    + (1|subj), data=data,REML = FALSE);
+ results = mediation::mediate(fit.mediator, fit.dv, treat="edgedisCS",   mediator="cer")
+
+ library(lmerTest) # add back for full summaries/ anova info
+ fit.mediator2=lmer(cer ~ edgedisCS*texrot  + (1|subj), data=data,REML = FALSE);
+ fit.totaleffect2=lmer(csLatindex ~ edgedisCS*texrot     + (1|subj), data=data,REML = FALSE);
+ fit.dv2=lmer(csLatindex ~ edgedisCS*texrot + cer    + (1|subj), data=data,REML = FALSE);
+
+```
+
+```{r}
+summary(results)
+summary(fit.mediator) #edgedis - path a
+anova(fit.mediator2)
+summary(fit.dv) # certain - path b
+anova(fit.dv2)
+summary(fit.totaleffect) # edgedis total effect - path c
+anova(fit.totaleffect2)
+
+```
+
+
