@@ -1,0 +1,57 @@
+---
+title: "Read me"
+author: "jac"
+date: "2023-08-02"
+output: html_document
+---
+Download all files to desktop for use in R studio
+HTML knit files are available to browse without R studio if required. 
+
+The lines below are relevant to the Proceedings of the Royal Society submission August 2023.
+File contain relevant code and output 
+Files upload data files extracted from Fieldtrip.
+See individual files for more detail. 
+
+
+R code and output for results:
+
+#submission 1 ~line 258
+#submission 1 ~line 272
+#submission 1 ~line 282
+#submission 1 ~line 326
+#submission 1 ~line 333
+
+```{r}
+rmarkdown::render("N2pc_cue_behavioural.Rmd")
+```
+
+#submission 1 ~line 365
+#submission 1 ~line 373
+
+```{r}
+rmarkdown::render("targetCPP.Rmd")
+```
+
+
+#submission 1 ~line 407
+```{r}
+rmarkdown::render("N2pc_cue_behavioural.Rmd")
+```
+
+#submission 1 ~line 411
+```{r}
+rmarkdown::render("N2_timeincrements_analysis.Rmd")
+```
+
+#submission 1 ~line 426
+```{r}
+rmarkdown::render("targetCPP.Rmd")
+```
+
+Supplementary 5
+
+```{r}
+rmarkdown::render("CPPcue_timeinc_supplementary5.Rmd")
+```
+
+
